@@ -3,6 +3,10 @@
  */
 export type NestedObject = { [key: string]: unknown };
 
+function isNestedObject(v: unknown): v is NestedObject {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
 /**
  * Convertit un objet plat en objet imbriqué en utilisant le point
  * comme séparateur de chemin (ex: "app.name" -> { app: { name: ... } }).
@@ -18,10 +22,17 @@ export function flatToNested(flat: Record<string, unknown>): NestedObject {
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
-      if (typeof current[part] !== 'object' || current[part] === null) {
-        current[part] = {};
+      const existing = current[part];
+      let next: NestedObject;
+
+      if (isNestedObject(existing)) {
+        next = existing;
+      } else {
+        next = {};
+        current[part] = next;
       }
-      current = current[part] as NestedObject;
+
+      current = next;
     }
 
     current[parts[parts.length - 1]] = flat[key];
