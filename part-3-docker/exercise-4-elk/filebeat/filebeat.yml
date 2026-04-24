@@ -1,0 +1,24 @@
+filebeat.inputs:
+  - type: filestream
+    id: syslog-files
+    enabled: true
+    paths:
+      - /var/log/*.log
+
+  # Autodetection des conteneurs Docker
+  - type: container
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/*/*.log
+
+processors:
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_docker_metadata: ~
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+# Niveau de log filebeat
+logging.level: info
+logging.to_files: false

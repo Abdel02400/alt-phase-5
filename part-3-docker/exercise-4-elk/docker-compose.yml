@@ -1,0 +1,118 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elk_elasticsearch
+    restart: unless-stopped
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - node.name=es01
+      - cluster.name=elk-cluster
+      - discovery.type=single-node
+      # Heap JVM réglée sur la moitié de la RAM allouée au conteneur
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - xpack.security.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - bootstrap.memory_lock=true
+    # Indispensable pour éviter le swap (sinon ES refuse de démarrer ou crash)
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    # Garantit que vm.max_map_count est correct (sinon ES quitte avec OOM au boot)
+    # Sur Linux : sysctl -w vm.max_map_count=262144 sur l'hôte
+    mem_limit: 2g
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - elk
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: elk_logstash
+    restart: unless-stopped
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment:
+      - LS_JAVA_OPTS=-Xms512m -Xmx512m
+    mem_limit: 1g
+    volumes:
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    networks:
+      - elk
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9600 | grep -q '\"status\":\"green\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: elk_kibana
+    restart: unless-stopped
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - SERVER_HOST=0.0.0.0
+    mem_limit: 1g
+    networks:
+      - elk
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5601/api/status | grep -q '\"level\":\"available\"'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.0
+    container_name: elk_filebeat
+    restart: unless-stopped
+    # user: root est requis pour lire les logs Docker et /var/log
+    user: root
+    # Le fichier filebeat.yml doit être en 0644 et appartenir à root
+    # sinon filebeat refuse de le charger (sécurité)
+    command: ["--strict.perms=false"]
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - elk
+    depends_on:
+      logstash:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+
+volumes:
+  elasticsearch_data:
+
+networks:
+  elk:
+    driver: bridge

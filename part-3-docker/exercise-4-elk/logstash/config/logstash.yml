@@ -1,0 +1,4 @@
+http.host: "0.0.0.0"
+# xpack.monitoring a été retiré de Logstash OSS et déprécié en 8.x.
+# On utilise la stack monitoring via Metricbeat ou on désactive.
+xpack.monitoring.enabled: false
