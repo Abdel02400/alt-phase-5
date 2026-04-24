@@ -8,10 +8,12 @@
  * Pour ajouter un exemple : l'importer ci-dessous et l'ajouter à la liste.
  */
 
+import { run as runGetValues } from '@/01-getValues/getValues.example';
+
 type Example = { title: string; run: () => void };
 
 const examples: Example[] = [
-  // Les exemples seront ajoutés ici au fur et à mesure des exercices.
+  { title: '1. getValues', run: runGetValues },
 ];
 
 function main(): void {
