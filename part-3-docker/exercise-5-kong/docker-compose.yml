@@ -1,0 +1,180 @@
+services:
+  kong-database:
+    image: postgres:13-alpine
+    container_name: kong_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${KONG_PG_USER}
+      POSTGRES_DB: ${KONG_PG_DATABASE}
+      POSTGRES_PASSWORD: ${KONG_PG_PASSWORD}
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  kong-migration:
+    image: kong:3.4
+    container_name: kong_migration
+    # Script 'once': s'exécute puis quitte. Pas de restart automatique.
+    restart: "no"
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: ${KONG_PG_USER}
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD}
+      KONG_PG_DATABASE: ${KONG_PG_DATABASE}
+    networks:
+      - kong-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+
+  kong:
+    image: kong:3.4
+    container_name: kong_gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"    # Proxy HTTP
+      - "8443:8443"    # Proxy HTTPS
+      - "8001:8001"    # Admin API (localhost uniquement — voir note)
+      - "8444:8444"    # Admin API HTTPS
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: ${KONG_PG_USER}
+      KONG_PG_PASSWORD: ${KONG_PG_PASSWORD}
+      KONG_PG_DATABASE: ${KONG_PG_DATABASE}
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      # IMPORTANT : Admin API exposée sur 0.0.0.0 car on bind sur localhost
+      # via la section ports. En prod, restreindre encore plus.
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+      KONG_PROXY_LISTEN: "0.0.0.0:8000, 0.0.0.0:8443 ssl"
+    networks:
+      - kong-net
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ----------------- Configuration Kong au démarrage -----------------
+  # Une fois Kong healthy, on crée les services et routes via l'Admin API.
+  # En prod on utiliserait decK ou le mode déclaratif (DB-less).
+  kong-bootstrap:
+    image: curlimages/curl:8.5.0
+    container_name: kong_bootstrap
+    restart: "no"
+    networks:
+      - kong-net
+    depends_on:
+      kong:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        echo "Registering microservices in Kong..."
+
+        # User service
+        curl -fsS -X POST http://kong:8001/services \
+          -d "name=user-service" \
+          -d "url=http://user-service:80"
+        curl -fsS -X POST http://kong:8001/services/user-service/routes \
+          -d "paths[]=/api/users" -d "name=user-route"
+
+        # Product service
+        curl -fsS -X POST http://kong:8001/services \
+          -d "name=product-service" \
+          -d "url=http://product-service:80"
+        curl -fsS -X POST http://kong:8001/services/product-service/routes \
+          -d "paths[]=/api/products" -d "name=product-route"
+
+        # Order service
+        curl -fsS -X POST http://kong:8001/services \
+          -d "name=order-service" \
+          -d "url=http://order-service:80"
+        curl -fsS -X POST http://kong:8001/services/order-service/routes \
+          -d "paths[]=/api/orders" -d "name=order-route"
+
+        echo "Done. Kong routes configured."
+
+  # ----------------- Microservices -----------------
+  user-service:
+    image: nginx:alpine
+    container_name: svc_user
+    restart: unless-stopped
+    # PAS de port publié : Kong accède via le DNS Docker interne.
+    volumes:
+      - ./services/user-service/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/user-service/html:/usr/share/nginx/html:ro
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  product-service:
+    image: nginx:alpine
+    container_name: svc_product
+    restart: unless-stopped
+    volumes:
+      - ./services/product-service/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/product-service/html:/usr/share/nginx/html:ro
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  order-service:
+    image: nginx:alpine
+    container_name: svc_order
+    restart: unless-stopped
+    volumes:
+      - ./services/order-service/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./services/order-service/html:/usr/share/nginx/html:ro
+    networks:
+      - kong-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: kong_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - kong-net
+
+volumes:
+  kong_data:
+  redis_data:
+
+networks:
+  kong-net:
+    driver: bridge
