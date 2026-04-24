@@ -16,7 +16,7 @@ part-2-modelisation/
 ├── README.md              # Ce fichier — vue d'ensemble
 ├── mcd/
 │   ├── mcd.md             # Description textuelle du MCD
-│   └── mcd.png            # Schéma graphique (à ajouter)
+│   └── MCD.svg            # Schéma graphique (généré avec Mocodo)
 ├── mld.md                 # Modèle logique de données (tables + FK)
 └── schema.sql             # Script SQL complet (DDL + données)
 ```

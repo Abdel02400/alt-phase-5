@@ -89,8 +89,8 @@ REDEVANCE
 
 ## Schéma graphique
 
-Le schéma visuel du MCD au format image doit être placé à côté de ce fichier
-sous le nom `mcd.png`. Il sera généré via un outil (Looping, DrawIO, Mocodo…).
+Le schéma visuel du MCD est fourni à côté de ce fichier sous le nom
+`MCD.svg` (généré avec Mocodo).
 
 Structure visuelle attendue :
 
