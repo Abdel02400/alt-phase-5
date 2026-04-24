@@ -17,6 +17,10 @@ import { run as runFindKeysByValue }        from '@/06-findKeysByValue/findKeysB
 import { run as runCreateObjectFromArrays } from '@/07-createObjectFromArrays/createObjectFromArrays.example';
 import { run as runCountValues }            from '@/08-countValues/countValues.example';
 import { run as runExtractProperties }      from '@/09-extractProperties/extractProperties.example';
+import { run as runSortObjectByValue }      from '@/10-sortObjectByValue/sortObjectByValue.example';
+import { run as runFindMaxValue }           from '@/11-findMaxValue/findMaxValue.example';
+import { run as runCreateObjectFromPairs }  from '@/12-createObjectFromPairs/createObjectFromPairs.example';
+import { run as runFindValueInObject }      from '@/13-findValueInObject/findValueInObject.example';
 
 type Example = { title: string; run: () => void };
 
@@ -30,6 +34,10 @@ const examples: Example[] = [
   { title: '7. createObjectFromArrays', run: runCreateObjectFromArrays },
   { title: '8. countValues',            run: runCountValues },
   { title: '9. extractProperties',      run: runExtractProperties },
+  { title: '10. sortObjectByValue',     run: runSortObjectByValue },
+  { title: '11. findMaxValue',          run: runFindMaxValue },
+  { title: '12. createObjectFromPairs', run: runCreateObjectFromPairs },
+  { title: '13. findValueInObject',     run: runFindValueInObject },
 ];
 
 function main(): void {
