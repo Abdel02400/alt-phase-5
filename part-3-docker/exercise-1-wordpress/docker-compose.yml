@@ -1,0 +1,71 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wp_mysql
+    restart: unless-stopped
+    environment:
+      # Obligatoire : MySQL 8 refuse de démarrer sans mot de passe root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  wordpress:
+    image: wordpress:latest
+    container_name: wp_app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_USER: ${MYSQL_USER}
+      WORDPRESS_DB_PASSWORD: ${MYSQL_PASSWORD}
+      WORDPRESS_DB_NAME: ${MYSQL_DATABASE}
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: wp_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      UPLOAD_LIMIT: 64M
+    networks:
+      - backend
+      - frontend
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  wordpress_data:
+  mysql_data:
+
+networks:
+  # Base de données isolée : non accessible depuis l'hôte
+  backend:
+    driver: bridge
+    internal: false
+  # Frontend : seuls WordPress et phpMyAdmin exposent des ports
+  frontend:
+    driver: bridge
