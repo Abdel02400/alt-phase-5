@@ -4,8 +4,6 @@
  * Chaque dossier `src/NN-nomFonction/` expose un fichier `<nom>.example.ts`
  * qui exporte une fonction `run(): void` affichant la démo correspondante
  * au cas d'usage de l'énoncé.
- *
- * Pour ajouter un exemple : l'importer ci-dessous et l'ajouter à la liste.
  */
 
 import { run as runGetValues }              from '@/01-getValues/getValues.example';
@@ -21,6 +19,11 @@ import { run as runSortObjectByValue }      from '@/10-sortObjectByValue/sortObj
 import { run as runFindMaxValue }           from '@/11-findMaxValue/findMaxValue.example';
 import { run as runCreateObjectFromPairs }  from '@/12-createObjectFromPairs/createObjectFromPairs.example';
 import { run as runFindValueInObject }      from '@/13-findValueInObject/findValueInObject.example';
+import { run as runGroupByProperty }        from '@/14-groupByProperty/groupByProperty.example';
+import { run as runValidateObject }         from '@/15-validateObject/validateObject.example';
+import { run as runCompareDifferences }     from '@/16-compareDifferences/compareDifferences.example';
+import { run as runObjectToUrlParams }      from '@/17-objectToUrlParams/objectToUrlParams.example';
+import { run as runGetObjectStats }         from '@/18-getObjectStats/getObjectStats.example';
 
 type Example = { title: string; run: () => void };
 
@@ -38,14 +41,14 @@ const examples: Example[] = [
   { title: '11. findMaxValue',          run: runFindMaxValue },
   { title: '12. createObjectFromPairs', run: runCreateObjectFromPairs },
   { title: '13. findValueInObject',     run: runFindValueInObject },
+  { title: '14. groupByProperty',       run: runGroupByProperty },
+  { title: '15. validateObject',        run: runValidateObject },
+  { title: '16. compareDifferences',    run: runCompareDifferences },
+  { title: '17. objectToUrlParams',     run: runObjectToUrlParams },
+  { title: '18. getObjectStats',        run: runGetObjectStats },
 ];
 
 function main(): void {
-  if (examples.length === 0) {
-    console.log('Aucun exemple enregistré pour le moment.');
-    return;
-  }
-
   for (const { title, run } of examples) {
     console.log(`\n=== ${title} ===`);
     run();
