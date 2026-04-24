@@ -6,33 +6,42 @@ Implémentation des **18 fonctions** de manipulation d'objets demandées par l'e
 
 - **TypeScript 5** en mode strict
 - **Jest + ts-jest** pour les tests unitaires
-- **ts-node** pour l'exécution directe de la démo
+- **ts-node** pour l'exécution directe des exemples
 
-## Structure
+## Architecture
+
+Un dossier par exercice — chacun contient la fonction, ses tests et son exemple :
 
 ```
 part-1-typescript/
 ├── src/
-│   ├── object-functions.ts   # Les 18 fonctions typées
-│   └── index.ts              # Démo exécutant tous les cas d'usage
-├── tests/
-│   └── object-functions.test.ts  # Tests unitaires Jest
+│   ├── 01-getValues/
+│   │   ├── getValues.ts          # La fonction
+│   │   ├── getValues.test.ts     # Les tests Jest
+│   │   └── getValues.example.ts  # Le cas d'usage de l'énoncé
+│   ├── 02-transformValues/
+│   │   └── ...
+│   ├── ... (18 dossiers)
+│   └── run-all-examples.ts       # Runner qui enchaîne tous les exemples
 ├── package.json
 ├── tsconfig.json
 └── jest.config.js
 ```
 
-## Installation et exécution
+## Commandes
 
 ```bash
 cd part-1-typescript
 npm install
 
-# Lance la démo (reproduit les cas de l'énoncé)
+# Exécute TOUS les exemples des 18 exercices en séquence
 npm start
 
-# Lance la suite de tests
+# Lance TOUS les tests Jest (auto-découverte dans src/**/*.test.ts)
 npm test
+
+# Mode watch pour les tests
+npm run test:watch
 
 # Build TypeScript → JavaScript
 npm run build
@@ -60,3 +69,28 @@ npm run build
 | 16 | `compareDifferences`     | Diff entre deux objets (added / removed / modified)    |
 | 17 | `objectToUrlParams`      | Sérialise en query string URL-encodée                  |
 | 18 | `getObjectStats`         | Min, max, moyenne, médiane, variance, écart-type       |
+
+## Convention par exercice
+
+Chaque dossier `NN-nomFonction/` contient :
+
+- **`nomFonction.ts`** — exporte la fonction, fortement typée.
+- **`nomFonction.test.ts`** — tests Jest (cas nominal + cas limites).
+- **`nomFonction.example.ts`** — exporte `run(): void` qui reproduit le cas
+  d'usage de l'énoncé. Enregistré dans `run-all-examples.ts`.
+
+## Alias TypeScript
+
+Un alias `@/*` pointe vers `src/*` (configuré dans `tsconfig.json`, supporté par
+ts-node via `tsconfig-paths` et par Jest via `moduleNameMapper`).
+
+Imports recommandés :
+
+```ts
+// Depuis le runner global ou un autre exercice :
+import { run as runGetValues } from '@/01-getValues/getValues.example';
+import { getValues } from '@/01-getValues/getValues';
+
+// À l'intérieur d'un exercice (même dossier), garder le chemin relatif :
+import { getValues } from './getValues';
+```
